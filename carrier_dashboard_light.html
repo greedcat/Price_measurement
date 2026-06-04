@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrier Rate Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F5F7;
+  --surface:#FFFFFF;
+  --card:#FFFFFF;
+  --card2:#F9FAFB;
+  --border:#E2E5EB;
+  --border2:#CDD0D8;
+  --accent:#0F7A56;
+  --accent-light:#E6F5EF;
+  --danger:#C0392B;
+  --danger-light:#FDECEA;
+  --amber:#B7770D;
+  --amber-light:#FEF3CD;
+  --blue:#1A5FA8;
+  --blue-light:#E8F0FB;
+  --text:#1A1D23;
+  --text2:#4A5060;
+  --text3:#8A90A0;
+  --mono:'DM Mono',monospace;
+  --display:'Syne',sans-serif;
+  --body:'DM Sans',sans-serif;
+  --radius:10px;
+  --shadow:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* ── header ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:2rem 2.5rem 1.5rem;box-shadow:var(--shadow)}
+.header h1{font-family:var(--display);font-size:1.75rem;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+.header h1 em{font-style:normal;color:var(--accent)}
+.header-sub{font-family:var(--mono);font-size:.75rem;color:var(--text3);margin-top:.35rem}
+.pills{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem}
+.pill{font-family:var(--mono);font-size:.7rem;font-weight:500;padding:4px 10px;border-radius:20px}
+.pill-green{background:var(--accent-light);color:var(--accent)}
+.pill-amber{background:var(--amber-light);color:var(--amber)}
+.pill-blue{background:var(--blue-light);color:var(--blue)}
+
+/* ── metrics ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.mc{background:var(--surface);padding:1.1rem 1.5rem}
+.mc-label{font-size:.68rem;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+.mc-value{font-size:1.6rem;font-weight:700;font-family:var(--display);color:var(--text)}
+.mc-value.g{color:var(--accent)}
+.mc-value.r{color:var(--danger)}
+.mc-sub{font-size:.72rem;color:var(--text3);margin-top:.2rem;font-family:var(--mono)}
+
+/* ── nav ── */
+.nav{background:var(--surface);border-bottom:2px solid var(--border);display:flex;overflow-x:auto;padding:0 2.5rem}
+.nav-btn{background:none;border:none;border-bottom:2.5px solid transparent;padding:.85rem 1.2rem;font-family:var(--body);font-size:.85rem;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s;margin-bottom:-2px}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+/* ── panels ── */
+.panel{display:none;padding:2rem 2.5rem 4rem;max-width:1400px;margin:0 auto}
+.panel.active{display:block}
+.section-title{font-family:var(--display);font-size:1rem;font-weight:800;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.section-title .tag{font-family:var(--mono);font-size:.68rem;font-weight:400;color:var(--text3);background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:2px 8px}
+
+/* ── cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem 1.5rem;margin-bottom:1.25rem}
+.card-title{font-size:.72rem;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem;font-weight:500}
+
+/* ── chart ── */
+.chart-wrap{position:relative}
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+@media(max-width:900px){.charts-2col{grid-template-columns:1fr}}
+
+/* ── table ── */
+.tbl-outer{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{background:var(--card2);padding:.7rem 1rem;text-align:right;font-size:.68rem;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--border);font-weight:500;white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F7F9FC}
+tbody td{padding:.6rem 1rem;text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)}
+tbody td:first-child{text-align:left;font-weight:600;color:var(--text);font-family:var(--body)}
+.c-best{color:var(--accent)!important;font-weight:600!important;background:var(--accent-light)}
+.c-worst{color:var(--danger)!important;font-weight:600!important;background:var(--danger-light)}
+.c-na{color:var(--border2)!important}
+.c-avg{color:var(--blue)!important;font-weight:600!important}
+.tbl-avg-row td{background:var(--card2);border-top:2px solid var(--border2);font-weight:600;color:var(--text)!important}
+
+/* ── heatmap ── */
+.hm-table{width:100%;border-collapse:separate;border-spacing:3px;font-size:.78rem;font-family:var(--mono)}
+.hm-table th{padding:.5rem .75rem;color:var(--text3);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;text-align:center;white-space:nowrap;background:none;font-weight:500}
+.hm-table th.left{text-align:left}
+.hm-table .dest-lbl{padding:.45rem .75rem;font-weight:600;color:var(--text);text-align:left;font-family:var(--body);font-size:.82rem}
+.hm-cell{border-radius:6px;padding:.4rem .6rem;font-size:.75rem;font-weight:600;min-width:58px;display:inline-block;text-align:center;letter-spacing:-.01em}
+
+/* ── waiting ── */
+.wait-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem}
+.wait-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem;overflow:hidden;position:relative}
+.wait-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.wait-carrier{font-family:var(--display);font-size:1rem;font-weight:800;margin-bottom:.75rem}
+.wait-row{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.wait-row:last-child{border-bottom:none}
+.wait-lbl{color:var(--text3);font-family:var(--mono);font-size:.75rem}
+.wait-val{font-family:var(--mono);font-weight:600;font-size:.8rem}
+.wg{color:var(--accent)}.wr{color:var(--danger)}.wa{color:var(--amber)}
+
+/* ── best picks ── */
+.best-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.9rem}
+.best-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.1rem 1.25rem;transition:box-shadow .15s}
+.best-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.best-dest{font-family:var(--mono);font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+.best-carrier{font-family:var(--display);font-size:1.1rem;font-weight:800;margin-bottom:.25rem}
+.best-cost{font-family:var(--mono);font-size:.78rem;color:var(--text2)}
+.best-save{font-size:.72rem;font-family:var(--mono);color:var(--accent);margin-top:.2rem;font-weight:500}
+.best-bar{height:3px;border-radius:2px;margin-top:.75rem;opacity:.35}
+
+/* ── legend ── */
+.legend{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem}
+.leg{display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text2);font-family:var(--mono)}
+.leg-sq{width:10px;height:10px;border-radius:2px}
+
+/* ── key box ── */
+.key-box{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.75rem;font-family:var(--mono)}
+.key-item{padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Carrier <em>Rate</em> Dashboard</h1>
+  <div class="header-sub">Cost-per-pallet analysis across all warehouses and carriers</div>
+  <div class="pills">
+    <span class="pill pill-green">Boxtruck = 12 pallets</span>
+    <span class="pill pill-blue">Big truck = 26 pallets</span>
+    <span class="pill pill-amber">6 carriers · 12 warehouses</span>
+  </div>
+</div>
+
+<div class="metrics" id="metrics"></div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchTab('rates',this)">Rate Table</button>
+  <button class="nav-btn" onclick="switchTab('charts',this)">Charts</button>
+  <button class="nav-btn" onclick="switchTab('heatmap',this)">Heatmap</button>
+  <button class="nav-btn" onclick="switchTab('waiting',this)">Waiting Time</button>
+  <button class="nav-btn" onclick="switchTab('best',this)">Best Picks</button>
+</div>
+
+<!-- RATES -->
+<div class="panel active" id="panel-rates">
+  <div class="section-title">Rate Table <span class="tag">cost per pallet at full load</span></div>
+  <div class="key-box">
+    <span class="key-item" style="background:var(--accent-light);color:var(--accent)">✅ Cheapest per row</span>
+    <span class="key-item" style="background:var(--danger-light);color:var(--danger)">❌ Most expensive</span>
+    <span class="key-item" style="background:var(--blue-light);color:var(--blue)">AVG = row average</span>
+  </div>
+  <div class="tbl-outer"><table id="rate-table"></table></div>
+</div>
+
+<!-- CHARTS -->
+<div class="panel" id="panel-charts">
+  <div class="section-title">GTA Warehouses</div>
+  <div class="legend" id="legend"></div>
+  <div class="card">
+    <div class="card-title">Cost per pallet — 5106 through YGK1</div>
+    <div class="chart-wrap" style="height:280px"><canvas id="cGTA" role="img" aria-label="GTA warehouse cost per pallet bar chart"></canvas></div>
+  </div>
+  <div class="section-title" style="margin-top:1.5rem">Ottawa Warehouses</div>
+  <div class="card">
+    <div class="card-title">Cost per pallet — YOW1 · YOW3</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="cOTT" role="img" aria-label="Ottawa warehouse cost per pallet bar chart"></canvas></div>
+  </div>
+  <div class="section-title" style="margin-top:1.5rem">Overall Average</div>
+  <div class="charts-2col">
+    <div class="card">
+      <div class="card-title">Average $/pallet across all warehouses served (lowest = best)</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="cAVG" role="img" aria-label="Average cost per pallet horizontal bar chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Trip cost comparison — 12 pallets vs 26 pallets</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="cTrip" role="img" aria-label="Trip cost at 12 and 26 pallets"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- HEATMAP -->
+<div class="panel" id="panel-heatmap">
+  <div class="section-title">Cost Heatmap <span class="tag">green = cheap · red = expensive · grey = no rate</span></div>
+  <div class="card">
+    <div style="overflow-x:auto"><table class="hm-table" id="hm-table"></table></div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div class="panel" id="panel-waiting">
+  <div class="section-title">Waiting Time Fees</div>
+  <div class="wait-grid" id="wait-grid"></div>
+  <div class="section-title">Detention Cost Comparison</div>
+  <div class="card">
+    <div class="card-title">Total detention charge by hours waited (after free window)</div>
+    <div class="chart-wrap" style="height:280px"><canvas id="cWait" role="img" aria-label="Detention cost by carrier and wait hours"></canvas></div>
+  </div>
+</div>
+
+<!-- BEST PICKS -->
+<div class="panel" id="panel-best">
+  <div class="section-title">Best Picks <span class="tag">cheapest carrier per destination</span></div>
+  <div class="best-grid" id="best-grid"></div>
+</div>
+
+<script>
+const BOXTRUCK_CAP=12,BIGTRUCK_CAP=26;
+const RATES={
+  "5106":{BENZ:225,Boxtruck:192},
+  "YYZ3":{GLE:330,BENZ:350,Will:330,Boxtruck:143.36,Ceycan:429},
+  "YYZ4":{GLE:330,BENZ:350,Will:330,Boxtruck:148.36,Ceycan:429},
+  "YYZ7":{GLE:350,BENZ:360,Will:330,Boxtruck:229.36,Ceycan:495.5},
+  "YYZ9":{GLE:380,BENZ:400,Will:370,Boxtruck:250.36,Ceycan:522},
+  "YOO1":{GLE:400,BENZ:470,Will:400,Boxtruck:287.36,Ceycan:614.4},
+  "XYY1":{GLE:400,BENZ:470,Will:400,Boxtruck:287.36,Ceycan:614.4},
+  "YHM1":{GLE:440,BENZ:470,Will:450,Boxtruck:283.36,Ceycan:601.2},
+  "YXU1":{GLE:690,BENZ:750,Will:680,Boxtruck:568.36,Ceycan:891.6},
+  "YGK1":{GLE:750,BENZ:900,Will:700,Boxtruck:695.36,Ceycan:825.6},
+  "YOW1":{Ceycan:1380,Transnet:1250,"Fast Carriers":1000},
+  "YOW3":{Ceycan:1380,Transnet:1250,"Fast Carriers":1000},
+};
+const WAITING={
+  GLE:{free:6,fee:35},BENZ:{free:2,fee:40},Ceycan:{free:2,fee:55},
+  Transnet:{free:2,fee:50},"Fast Carriers":{free:2,fee:60},Will:{free:3,fee:50}
+};
+const COLORS={
+  Boxtruck:"#2563EB",GLE:"#059669",BENZ:"#D97706",
+  Will:"#7C3AED",Ceycan:"#DC2626",Transnet:"#DB2777","Fast Carriers":"#0891B2"
+};
+const DESTS=Object.keys(RATES);
+const CARRIERS=[...new Set(Object.values(RATES).flatMap(Object.keys))].sort();
+const GTA=DESTS.filter(d=>!["YOW1","YOW3"].includes(d));
+const OTT=["YOW1","YOW3"];
+
+function cap(c){return c==="Boxtruck"?BOXTRUCK_CAP:BIGTRUCK_CAP}
+function cpp(c,r){const p=cap(c);return Math.ceil(p/p)*r/p}
+
+const cppData={};
+CARRIERS.forEach(c=>cppData[c]={});
+DESTS.forEach(dest=>{
+  Object.entries(RATES[dest]).forEach(([c,r])=>{
+    cppData[c][dest]=+(r/cap(c)).toFixed(2);
+  });
+});
+
+const avgData={};
+CARRIERS.forEach(c=>{
+  const v=Object.values(cppData[c]);
+  if(v.length)avgData[c]=+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(2);
+});
+
+// metrics
+const best=Object.entries(avgData).sort((a,b)=>a[1]-b[1])[0];
+const worst=Object.entries(avgData).sort((a,b)=>b[1]-a[1])[0];
+document.getElementById('metrics').innerHTML=`
+  <div class="mc"><div class="mc-label">Cheapest carrier</div><div class="mc-value g">${best[0]}</div><div class="mc-sub">$${best[1].toFixed(2)}/pallet avg</div></div>
+  <div class="mc"><div class="mc-label">Most expensive</div><div class="mc-value r">${worst[0]}</div><div class="mc-sub">$${worst[1].toFixed(2)}/pallet avg</div></div>
+  <div class="mc"><div class="mc-label">Carriers tracked</div><div class="mc-value">${CARRIERS.length}</div><div class="mc-sub">across all routes</div></div>
+  <div class="mc"><div class="mc-label">Warehouses</div><div class="mc-value">${DESTS.length}</div><div class="mc-sub">GTA + Ottawa</div></div>
+  <div class="mc"><div class="mc-label">Boxtruck load</div><div class="mc-value">12</div><div class="mc-sub">pallets per trip</div></div>
+  <div class="mc"><div class="mc-label">Big truck load</div><div class="mc-value">26</div><div class="mc-sub">pallets per trip</div></div>
+`;
+
+// rate table
+function buildTable(){
+  let h=`<thead><tr><th>Destination</th>`;
+  CARRIERS.forEach(c=>h+=`<th>${c}</th>`);
+  h+=`<th>AVG</th></tr></thead><tbody>`;
+  DESTS.forEach(dest=>{
+    const vals={};
+    CARRIERS.forEach(c=>{if(cppData[c][dest]!==undefined)vals[c]=cppData[c][dest];});
+    const arr=Object.values(vals);
+    const mn=arr.length?Math.min(...arr):null;
+    const mx=arr.length?Math.max(...arr):null;
+    const avg=arr.length?(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2):null;
+    h+=`<tr><td>${dest}</td>`;
+    CARRIERS.forEach(c=>{
+      if(vals[c]!==undefined){
+        const v=vals[c];
+        let cls='',mark='';
+        if(v===mn&&arr.length>1){cls='c-best';mark='✅ ';}
+        else if(v===mx&&arr.length>1){cls='c-worst';mark='❌ ';}
+        h+=`<td class="${cls}">${mark}$${v.toFixed(2)}</td>`;
+      } else h+=`<td class="c-na">—</td>`;
+    });
+    h+=`<td class="c-avg">${avg?'$'+avg:'—'}</td></tr>`;
+  });
+  h+=`<tr class="tbl-avg-row"><td>Average</td>`;
+  CARRIERS.forEach(c=>h+=`<td class="c-avg">${avgData[c]?'$'+avgData[c].toFixed(2):'—'}</td>`);
+  h+=`<td>—</td></tr></tbody>`;
+  document.getElementById('rate-table').innerHTML=h;
+}
+
+// legend
+function buildLegend(){
+  const lg=document.getElementById('legend');
+  CARRIERS.forEach(c=>{
+    if(Object.keys(cppData[c]).some(d=>GTA.includes(d))){
+      lg.innerHTML+=`<span class="leg"><span class="leg-sq" style="background:${COLORS[c]}"></span>${c}</span>`;
+    }
+  });
+}
+
+// bar chart
+function barChart(id,dests){
+  const active=CARRIERS.filter(c=>dests.some(d=>cppData[c][d]!==undefined));
+  new Chart(document.getElementById(id),{
+    type:'bar',
+    data:{labels:dests,datasets:active.map(c=>({
+      label:c,
+      data:dests.map(d=>cppData[c][d]??null),
+      backgroundColor:COLORS[c]+'22',
+      borderColor:COLORS[c],
+      borderWidth:1.5,borderRadius:4,
+    }))},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#4A5060',font:{size:11},boxWidth:10,padding:12}},
+               tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.parsed.y?.toFixed(2)||'—'}/pallet`}}},
+      scales:{
+        x:{ticks:{color:'#4A5060',font:{size:11}},grid:{color:'#E2E5EB'}},
+        y:{ticks:{color:'#4A5060',callback:v=>'$'+v,font:{size:10}},grid:{color:'#E2E5EB'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// avg chart
+function buildAvg(){
+  const sorted=Object.entries(avgData).sort((a,b)=>a[1]-b[1]);
+  new Chart(document.getElementById('cAVG'),{
+    type:'bar',
+    data:{labels:sorted.map(e=>e[0]),datasets:[{
+      label:'Avg $/pallet',
+      data:sorted.map(e=>e[1]),
+      backgroundColor:sorted.map(e=>COLORS[e[0]]+'33'),
+      borderColor:sorted.map(e=>COLORS[e[0]]),
+      borderWidth:1.5,borderRadius:4,
+    }]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${c.parsed.x.toFixed(2)}/pallet`}}},
+      scales:{
+        x:{ticks:{color:'#4A5060',callback:v=>'$'+v,font:{size:10}},grid:{color:'#E2E5EB'},beginAtZero:true},
+        y:{ticks:{color:'#1A1D23',font:{size:11,weight:'600'}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// trip cost chart
+function buildTrip(){
+  const dests=GTA;
+  const datasets=[
+    {label:'Boxtruck (12 pal)',data:dests.map(d=>RATES[d]?.Boxtruck??null),backgroundColor:'#2563EB22',borderColor:'#2563EB',borderWidth:1.5,borderRadius:4},
+    {label:'GLE (26 pal)',    data:dests.map(d=>RATES[d]?.GLE??null),    backgroundColor:'#05966922',borderColor:'#059669',borderWidth:1.5,borderRadius:4},
+    {label:'Will (26 pal)',   data:dests.map(d=>RATES[d]?.Will??null),   backgroundColor:'#7C3AED22',borderColor:'#7C3AED',borderWidth:1.5,borderRadius:4},
+  ];
+  new Chart(document.getElementById('cTrip'),{
+    type:'bar',
+    data:{labels:dests,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#4A5060',font:{size:10},boxWidth:10}},
+               tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.parsed.y}/trip`}}},
+      scales:{
+        x:{ticks:{color:'#4A5060',font:{size:10}},grid:{color:'#E2E5EB'}},
+        y:{ticks:{color:'#4A5060',callback:v=>'$'+v,font:{size:10}},grid:{color:'#E2E5EB'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// heatmap
+function buildHeatmap(){
+  const sortedC=Object.entries(avgData).sort((a,b)=>a[1]-b[1]).map(e=>e[0]);
+  const all=[];
+  DESTS.forEach(d=>sortedC.forEach(c=>{if(cppData[c][d]!==undefined)all.push(cppData[c][d])}));
+  const mn=Math.min(...all),mx=Math.max(...all);
+
+  function heatColor(v){
+    const t=(v-mn)/(mx-mn);
+    if(t<.33)return{bg:`rgba(5,150,105,${.15+t*.5})`,tx:'#064E3B'};
+    if(t<.66)return{bg:`rgba(217,119,6,${.15+t*.4})`,tx:'#78350F'};
+    return{bg:`rgba(220,38,38,${.2+t*.5})`,tx:'#7F1D1D'};
+  }
+
+  let h=`<thead><tr><th class="left">Dest</th>`;
+  sortedC.forEach(c=>h+=`<th>${c}</th>`);
+  h+=`</tr></thead><tbody>`;
+  DESTS.forEach(dest=>{
+    h+=`<tr><td class="dest-lbl">${dest}</td>`;
+    sortedC.forEach(c=>{
+      const v=cppData[c][dest];
+      if(v!==undefined){
+        const {bg,tx}=heatColor(v);
+        h+=`<td><span class="hm-cell" style="background:${bg};color:${tx}">$${v.toFixed(0)}</span></td>`;
+      } else {
+        h+=`<td><span class="hm-cell" style="background:#F0F1F3;color:#C0C5D0">—</span></td>`;
+      }
+    });
+    h+=`</tr>`;
+  });
+  document.getElementById('hm-table').innerHTML=h+`</tbody>`;
+}
+
+// waiting
+function buildWaiting(){
+  const grid=document.getElementById('wait-grid');
+  Object.entries(WAITING).forEach(([c,{free,fee}])=>{
+    const color=COLORS[c]||'#333';
+    const rows=[2,4,6,8].map(h=>{
+      const d=Math.max(0,h-free)*fee;
+      return`<div class="wait-row"><span class="wait-lbl">${h}hr wait</span><span class="wait-val ${d===0?'wg':d<100?'wa':'wr'}">${d===0?'FREE':'$'+d}</span></div>`;
+    }).join('');
+    grid.innerHTML+=`
+      <div class="wait-card" style="border-top:3px solid ${color}">
+        <div class="wait-carrier" style="color:${color}">${c}</div>
+        <div class="wait-row"><span class="wait-lbl">Free hours</span><span class="wait-val wg">${free} hrs</span></div>
+        <div class="wait-row"><span class="wait-lbl">Hourly fee</span><span class="wait-val">$${fee}/hr</span></div>
+        ${rows}
+      </div>`;
+  });
+
+  const hrs=[1,2,3,4,5,6,7,8];
+  new Chart(document.getElementById('cWait'),{
+    type:'line',
+    data:{labels:hrs.map(h=>h+'h'),datasets:Object.entries(WAITING).map(([c,{free,fee}])=>({
+      label:c,
+      data:hrs.map(h=>Math.max(0,h-free)*fee),
+      borderColor:COLORS[c]||'#888',
+      backgroundColor:'transparent',
+      borderWidth:2,pointRadius:4,
+      pointBackgroundColor:COLORS[c],
+      tension:.3,
+    }))},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#4A5060',font:{size:11},boxWidth:10,padding:12}},
+               tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.parsed.y}`}}},
+      scales:{
+        x:{ticks:{color:'#4A5060',font:{size:11}},grid:{color:'#E2E5EB'}},
+        y:{ticks:{color:'#4A5060',callback:v=>'$'+v},grid:{color:'#E2E5EB'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// best picks
+function buildBest(){
+  const grid=document.getElementById('best-grid');
+  DESTS.forEach(dest=>{
+    const vals={};
+    CARRIERS.forEach(c=>{if(cppData[c][dest]!==undefined)vals[c]=cppData[c][dest];});
+    if(!Object.keys(vals).length)return;
+    const sorted=Object.entries(vals).sort((a,b)=>a[1]-b[1]);
+    const [bc,bv]=sorted[0];
+    const wv=sorted[sorted.length-1][1];
+    const save=sorted.length>1?((wv-bv)/wv*100).toFixed(0):null;
+    const color=COLORS[bc]||'#059669';
+    grid.innerHTML+=`
+      <div class="best-card">
+        <div class="best-dest">${dest}</div>
+        <div class="best-carrier" style="color:${color}">${bc}</div>
+        <div class="best-cost">$${bv.toFixed(2)} per pallet</div>
+        ${save?`<div class="best-save">saves ${save}% vs most expensive</div>`:''}
+        <div class="best-bar" style="background:${color}"></div>
+      </div>`;
+  });
+}
+
+// tabs
+let chartsBuilt=false;
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='charts'&&!chartsBuilt){
+    chartsBuilt=true;
+    buildLegend();
+    barChart('cGTA',GTA);
+    barChart('cOTT',OTT);
+    buildAvg();
+    buildTrip();
+  }
+}
+
+buildTable();
+buildHeatmap();
+buildWaiting();
+buildBest();
+</script>
+</body>
+</html>
